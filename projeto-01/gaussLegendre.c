@@ -3,146 +3,107 @@
 #include <math.h>
 #include <gmp.h>
 
-void inicializarVariaveis( mpf_t a, mpf_t b, mpf_t x, mpf_t y, mpf_t t, mpf_t tmp, int nroLoop ) {
+void inicializarVariaveis( mpf_t* a, mpf_t* b, mpf_t* p, mpf_t* y, mpf_t* t, mpf_t* tmp, int* nroLoop ) {
 	
-	int precisao = 1 << nroLoop;	// precisao = 2 ^ nroLoop
+	int precisao = 1 << *nroLoop;	// precisao = 2 ^ nroLoop
 
-	/* Precisao do tamanho das variaveis do tipo mpf_init */
-	//int numBits = ( int ) ( ceil( ( double ) precisao * 3.33 ) );
-	mpf_set_default_prec( 10000000 );
+	/* Precisao de casas decimais de acordo com os numeros de Loop 
+	 * para as variaveis do tipo mpf_init 
+	 */
+	int numBits = ( int ) ( ceil( ( double ) precisao * 3.14 ) );
+	mpf_set_default_prec( numBits );
 
-	mpf_init( a );
-	mpf_init( b );
-	mpf_init( x );
-	mpf_init( y );
-	mpf_init( t );
-	mpf_init( tmp );
+	mpf_init( *a );
+	mpf_init( *b );
+	mpf_init( *p );
+	mpf_init( *y );
+	mpf_init( *t );
+	mpf_init( *tmp );
 
-	mpf_set_d( a, 1.0 );		// a = 1	
-	mpf_set_d( t, 0.25 );		// t = 1 / 4
-	mpf_set_d( x, 1.0 );		// x = 1
+	mpf_set_d( *a, 1.0 );		// a = 1	
+	mpf_set_d( *t, 0.25 );		// t = 1 / 4
+	mpf_set_d( *p, 1.0 );		// p = 1
 
-	mpf_sqrt_ui( tmp, 2L );	
-	mpf_ui_div( b, 1L, tmp );	// b = 1 / sqrt( 2 ) 
+	mpf_sqrt_ui( *tmp, 2L );	
+	mpf_ui_div( *b, 1L, *tmp );	// b = 1 / sqrt( 2 ) 
 }
 
-/*
- * Nessa funçao trabalhamos com dois arquivos (armazena temporariamente valor de PI e outra com valor de PI) 
- * a utilização desses dois arquivos foi justamente para facilitar o manuseio dos mesmos.
- */
-void escrevePI( mpf_t tmp, int nroLoop ) {
-
-	FILE *fileTmp, *filePI; 
-	/* Variaveis que serao utilizados, se necessario, para o auxilio da formatacao do valores de PI */
-	int carac = 0, grupo = 0, linhas = 0, casasDecimais = 0;
-	int grupoAux = 0, linhasAux = 0;
-	int v, i;
-
-	if( ( fileTmp = fopen( "pi.tmp", "w" ) ) && ( filePI = fopen( "pi.txt", "a+") ) ) {
-
-		/* Escreve o valor de PI no arquivo temporário */
-		mpf_out_str( fileTmp, 10, 0, tmp );
-		fflush( fileTmp );
-		freopen( "pi.tmp", "r", fileTmp );
+void valorPI( mpf_t* a, mpf_t *b, mpf_t* y, mpf_t* t, mpf_t* tmp) {
 	
-		for( i = 0; i < nroLoop; i++ ) {
-			
-			casasDecimais = 1 << i + 1;		// casasDecimais = 2 ^ ( i + 1)
-			
-			/* Ajuste do ponteiro no arquivo temporario ( fileTmp ) */
-			rewind( fileTmp );
-			fseek( fileTmp, 2, SEEK_SET );
-			v = fgetc ( fileTmp );
+	// calculo do PI... 
+	mpf_add( *tmp, *a, *b );
+	mpf_mul( *tmp, *tmp, *tmp );
+	mpf_mul_ui( *y, *t, 4L );
+	mpf_div( *tmp, *tmp, *y );			// PI = ( a + b ) ^ 2 / ( 4 * t )
 
-			fprintf( filePI, "Valor de PI: 3,\n" );
-
-			while( ( ( v = fgetc( fileTmp ) ) != EOF ) && ( carac < casasDecimais ) ) {
-			
-				fputc( v, filePI );
-				carac++;
-
-				/*============== Formatacao da saida das dizimas periodicas ==================*/
-				if( ( carac % 10 ) == 0 ) {
-				
-					fputc( ' ', filePI );
-					grupoAux = ( ( grupo + 1 ) % 5 );
-
-					if( grupoAux == 0 ) {
-
-						fputc( '\n', filePI );
-						linhasAux = ( ( linhas + 1 ) % 20 );
-
-						if( linhasAux == 0 )
-							
-							fputc( '\n', filePI );
-					}
-
-				}
-				/*=============================================================================*/
-			}
-
-			carac = 0;
-			fputc( '\n', filePI );
-			fputc( '\n', filePI );
-		}
-
-		fputc( '\n', filePI );
-		fputc( '\n', filePI );
-		fclose( fileTmp );
-		fclose( filePI );
-		//remove( "pi.tmp" );
-
-	}
-
-	else 
-		printf( "Erro no arquivo pi!!\n" );
+	mpf_out_str( NULL, 10, 0, *tmp );
+	printf("\n");
 
 }
 
-void gaussLegendre( mpf_t a, mpf_t b, mpf_t x, mpf_t y, mpf_t t, mpf_t tmp, int nroLoop ) {
+void gaussLegendre( mpf_t* a, mpf_t *b, mpf_t* p, mpf_t* y, mpf_t* t, mpf_t* tmp, int* nroLoop ) {
 
 	int i;
 
-	for( i = 0; i < nroLoop; i++ ){
+	for( i = 0; i < *nroLoop; i++ ){
 	
-		mpf_set( y, a );			// y = a
+		/* Imprime o valor de Pi a cada iteração */
+		valorPI( a, b, y, t, tmp );	
 
-		mpf_add( tmp, a, b );
-		mpf_div_ui(a, tmp, 2L);			// a = ( a + b ) / 2
+		mpf_set( *y, *a );			// y = a
 
-		mpf_mul( tmp, b, y );
-		mpf_sqrt( b, tmp );			// b = sqrt( b * y )
+		mpf_add( *tmp, *a, *b );
+		mpf_div_ui( *a, *tmp, 2L );		// a = ( a + b ) / 2
 
-		mpf_sub( tmp, y, a );
-		mpf_mul( y, tmp, tmp );
-		mpf_mul( tmp, x, y );
-		mpf_set( y, t );
-		mpf_sub( t, y, tmp );			// t = t - x * ( y - a ) ^ 2
+		mpf_mul( *tmp, *b, *y );
+		mpf_sqrt( *b, *tmp );			// b = sqrt( b * y )
 
-		mpf_set( tmp, x );
-		mpf_mul_ui( x, tmp, 2L );		// x = 2 * x
+		mpf_sub( *tmp, *y, *a );
+		mpf_mul( *y, *tmp, *tmp );
+		mpf_mul( *tmp, *p, *y );
+		mpf_set( *y, *t );
+		mpf_sub( *t, *y, *tmp );		// t = t - p * ( y - a ) ^ 2
 
-		// calculo do PI 
-		mpf_add( tmp, a, b );
-		mpf_mul( x, tmp, tmp );
-		mpf_mul_ui( y, t, 4L );
-		mpf_div( tmp, x, y );			// PI = ( a + b ) ^ 2 / ( 4 * t )
+		/* Na ultima iteracao nao ha necessiade de atualizar o valor de p */
+		if( i == ( *nroLoop - 1 ) ) {
+			
+			mpf_set( *tmp, *p );
+			mpf_mul_ui( *p, *tmp, 2L );	// p = 2 * p
 
-	}
-	
-	escrevePI( tmp, nroLoop );	
-		
+		}
+	}	
+}
+
+void limpaVariaveis( mpf_t* a, mpf_t *b, mpf_t* p, mpf_t* y, mpf_t* t, mpf_t* tmp ) {
+
+	mpf_clear( *a );	
+	mpf_clear( *b );
+	mpf_clear( *p );
+	mpf_clear( *y );
+	mpf_clear( *t );
+	mpf_clear( *tmp );
+
 }
 
 int main( int argc, char* argv[] ) {
 
-	int nroLoop = 10;
+	int nroLoop;
+	mpf_t a, b, p, y, t, tmp;
 
-	mpf_t a, b, x, y, t, tmp;
-
-	inicializarVariaveis( a, b, x, y, t, tmp, nroLoop );
+	/* Caso o numero de iteracao nao for recebida por parametro, este manterah o padrao de 24 iteracao, 
+	 * este valor eh suficiente para gerar casas decimais acima de 10 milhoes de digitos
+	*/
+	if( argc == 2 )
+		nroLoop = atoi( argv[1] );
 	
-	gaussLegendre( a, b, x, y, t, tmp, nroLoop );
+	else
+		nroLoop = 25;
+
+	inicializarVariaveis( &a, &b, &p, &y, &t, &tmp, &nroLoop ); 
+
+	gaussLegendre( &a, &b, &p, &y, &t, &tmp, &nroLoop );
+
+	limpaVariaveis( &a, &b, &p, &y, &t, &tmp );
 
 	return EXIT_SUCCESS;
 }
