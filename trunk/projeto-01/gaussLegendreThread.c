@@ -289,7 +289,7 @@ int main( int argc, char* argv[] ) {
 
 	pthread_t thread_a, thread_b, thread_t, thread_p;
 
-	/* Numeros de iteracao recebida pode ser recebida por parametro ou mantera o padrao de 24 iteracao, 
+	/* Numero de iteracao pode ser recebida por parametro ou manterah o padrao de 24 iteracao, 
 	 * ou seja, o valor padrao eh suficiente para gerar casas decimais acima de 10 milhoes
 	*/
 	if( argc == 2 ) 
