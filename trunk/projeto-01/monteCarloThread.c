@@ -125,18 +125,13 @@ void limpaVariaveis( ) {
 }
 
 int main( int argc, char* argv[] ) {
-
-	/* Atribui o valor maximo inteiro sem sinal a variavel nroLoop 
-	 * para maquina de 32 bits (4,294,967,295)
-	 */
-	unsigned long int nroLoop = ULONG_MAX;
-	
+		
 	if( argc == 2 )  
 		nroThreads = atoi( argv[ 1 ] );
 		
 	pthread_t thread[ nroThreads ];
 
-	inicializarVariaveis( nroLoop );
+	inicializarVariaveis();
 
 	criacaoThreads( &nroThreads, thread );
 
