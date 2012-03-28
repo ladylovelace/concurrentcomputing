@@ -1,0 +1,52 @@
+Forma de execução dos códigos
+
+Supondo-se que esteja utilizando máquina com sistema operacional Linux.
+
+_______________________________________________________________________
+			GAUSS-LEGENDRE
+
+Neste método pode ser passado na linha de comando um argumento, var1, este equivale ao número de iteração que o usuário deseja. Caso o
+argumento não seja especificado o programa fará 24 iterações. Este número é suficiente para gerar o valor de Pi com casas decimais de 10 
+milhões de dígitos.
+
+=======Método sequencial=======
+1.Compilar: gcc -o gaussLegendre gaussLegendre.c -lm -lgmp 
+2.Executar: ./gaussLegendre var1
+
+=======Método paralelo=======
+1. Compilar: gcc -o gaussThread gaussLegendreThread.c -lm -lgmp -lpthread
+2. Executar: ./gaussThread var1
+_______________________________________________________________________
+
+_______________________________________________________________________
+			BORWEIN
+
+=======Método sequencial=======
+
+1. Compilar: gcc -o borweinSeq main.c -lm -lgmp 
+2. Executar: ./borweinSeq
+
+=======Método paralelo=======
+Descomentar a linha //resolverBorweinPar(); do arquivo main.c
+Comentar a linha //resolverBorweinSeq(); do arquivo main.c
+1. Compilar: gcc -o borweinPar main.c -lm -lgmp -lpthread
+2. Executar: ./borweinPar
+_______________________________________________________________________
+
+_______________________________________________________________________
+			MONTE CARLO
+
+Neste método é passado através da linha de comando o argumento, var1, este é utilizado somente no método paralelo e refere-se a 
+quantidade de threads que o usuário deseja criar.
+
+=======Método sequencial=======
+
+1. Compilar: gcc -o monteCarlo monteCarlo.c -lgmp -lm
+2. Executar: ./monteCarlo 
+
+=======Método paralelo=======
+
+1. Compilar: gcc -o monteThread monteCarloThread.c -lgmp -lpthread -lm
+2. Executar: ./monteThread var1 
+_______________________________________________________________________
+
