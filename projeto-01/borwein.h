@@ -1,24 +1,16 @@
-/* 
- * File:   borwein.h
- * Author: lovelace
- *
- * Created on March 18, 2012, 6:10 PM
- */
+//
+//  borwein.h
+//  Borwein
+//
+//  Created by Leticia Silva on 3/27/12.
+//  Copyright (c) 2012 __MyCompanyName__. All rights reserved.
+//
 
-#ifndef BORWEIN_H
-#define	BORWEIN_H
+#ifndef Borwein_borwein_h
+#define Borwein_borwein_h
+extern void inicializarBorwein();
+extern void inicializarBorweinSeq();
+extern void resolverBorweinSeq();
+extern void resolverBorweinPar();
 
-#ifdef	__cplusplus
-extern "C" {
 #endif
-
-
-
-
-#ifdef	__cplusplus
-}
-#endif
-extern void inicializarBorweinSeq( mpf_t a, mpf_t y, int nroLoop ) ;
-extern void resolverBorwein(mpf_t a, mpf_t y, int nroLoop);
-#endif	/* BORWEIN_H */
-
