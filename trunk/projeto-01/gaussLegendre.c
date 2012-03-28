@@ -48,7 +48,7 @@ void gaussLegendre( mpf_t* a, mpf_t *b, mpf_t* p, mpf_t* y, mpf_t* t, mpf_t* tmp
 	for( i = 0; i < *nroLoop; i++ ){
 	
 		/* Imprime o valor de Pi a cada iteração */
-		valorPI( a, b, y, t, tmp );	
+		//valorPI( a, b, y, t, tmp );	
 
 		mpf_set( *y, *a );			// y = a
 
