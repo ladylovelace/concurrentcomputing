@@ -11,23 +11,23 @@ typedef struct {
     int id;
 } param;
 param p[15];
-void inicializarBorwein(void);
-void resolverBorweinSeq(void);
-void resolverBorweinPar(void);
+void inicializarBorwein(int nroLoop);
+void resolverBorweinSeq(int nroLoop);
+void resolverBorweinPar(int nroLoop);
 void funcao_y(void *arg);
 void *funcao_a(void *arg);
 void *funcao_a1(void *arg);
 void *funcao_a2(void *arg);
 void *funcao_a3(void *arg);
 
-void inicializarBorwein() {
+void inicializarBorwein(int nroLoop) {
     
     int i;
     mpf_t tmpr, eq;
     
-    mpf_set_default_prec(10000000*log2(10));
+    mpf_set_default_prec(33219281);
     
-    for (i = 0; i < 14; i++) {
+    for (i = 0; i < nroLoop; i++) {
         mpf_init(p[i].va);
         mpf_init_set_ui(p[i].va, 0.0);
         mpf_init(p[i].vy);
@@ -50,7 +50,7 @@ void inicializarBorwein() {
     mpf_sub_ui(p[0].vy, tmpr, 1L); //y0 = sqr(2) - 1
 }
 
-void resolverBorweinSeq() {
+void resolverBorweinSeq(int nroLoop) {
     time_t inicio,fim;
     mpf_t pi;
     mpf_t ptemp, stemp, atemp, mtemp, f1, f2, f3;
@@ -97,7 +97,7 @@ void resolverBorweinSeq() {
         mpf_clear(p[i].va);
         mpf_clear(p[i].vy);
         i++;
-    }    while (i < 13); // nao para
+    }    while (i < nroLoop); // nao para
     mpf_ui_div(pi,1L,p[i-1].va);
     gmp_printf("PI: %.10Ff\n",pi);
     fim = time(NULL);
@@ -172,7 +172,7 @@ void *funcao_a(void *arg) {
     pthread_exit(&a->va);
 }
 
-void resolverBorweinPar() {
+void resolverBorweinPar(int nroLoop) {
     time_t inicio,fim;
     mpf_t pi;
     mpf_init(pi);
@@ -192,10 +192,25 @@ void resolverBorweinPar() {
         pthread_join(thread_res[3], (void *) &res);
         pthread_create(&thread_res[4], NULL, (void *) &funcao_a, &p[j]);
         pthread_join(thread_res[4], (void *) &res);
+        mpf_clear(p[j].f1);
+        mpf_clear(p[j].f2);
+        mpf_clear(p[j].f3);
         j++;
-    } while (j < 13 );
+    } while (j < nroLoop );
     mpf_ui_div(pi,1L,p[j-1].va);
     gmp_printf("PI: %.10Ff\n",pi);
     fim = time(NULL);
     printf("Tempo em segundos: %f\n",difftime(fim, inicio));
+}
+int main(int argc, char** argv) {
+    int nroLoop;
+    if (argc == 2) {
+        nroLoop = atoi( argv[1] );
+    }
+    else
+        nroLoop = 13; // iterações suficientes para calcular 10 milhões de casas precisas do pi
+    inicializarBorwein(nroLoop);
+    //resolverBorweinSeq(nroLoop);
+    resolverBorweinPar(nroLoop);
+    return 0;
 }
