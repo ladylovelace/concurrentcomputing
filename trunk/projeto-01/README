@@ -10,10 +10,12 @@ argumento não seja especificado o programa fará 24 iterações. Este número �
 milhões de dígitos.
 
 =======Método sequencial=======
+
 1.Compilar: gcc -o gaussLegendre gaussLegendre.c -lm -lgmp 
 2.Executar: ./gaussLegendre var1
 
 =======Método paralelo=======
+
 1. Compilar: gcc -o gaussThread gaussLegendreThread.c -lm -lgmp -lpthread
 2. Executar: ./gaussThread var1
 _______________________________________________________________________
@@ -27,6 +29,7 @@ _______________________________________________________________________
 2. Executar: ./borweinSeq
 
 =======Método paralelo=======
+
 Descomentar a linha //resolverBorweinPar(); 
 Comentar a linha //resolverBorweinSeq(); 
 1. Compilar: gcc -o borweinPar borwein.c -lm -lgmp -lpthread
