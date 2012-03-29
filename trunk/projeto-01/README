@@ -23,13 +23,13 @@ _______________________________________________________________________
 
 =======Método sequencial=======
 
-1. Compilar: gcc -o borweinSeq main.c -lm -lgmp 
+1. Compilar: gcc -o borweinSeq borwein.c -lm -lgmp -lpthread 
 2. Executar: ./borweinSeq
 
 =======Método paralelo=======
-Descomentar a linha //resolverBorweinPar(); do arquivo main.c
-Comentar a linha //resolverBorweinSeq(); do arquivo main.c
-1. Compilar: gcc -o borweinPar main.c -lm -lgmp -lpthread
+Descomentar a linha //resolverBorweinPar(); 
+Comentar a linha //resolverBorweinSeq(); 
+1. Compilar: gcc -o borweinPar borwein.c -lm -lgmp -lpthread
 2. Executar: ./borweinPar
 _______________________________________________________________________
 
