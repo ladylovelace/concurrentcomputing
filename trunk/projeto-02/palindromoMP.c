@@ -4,7 +4,7 @@
 #include <math.h>
 #include <sys/time.h>
 #include <ctype.h>
-#include <omp.h>
+//#include <omp.h>
 
 #define TRUE 1
 #define FALSE 0
@@ -16,19 +16,18 @@ void crivoEratostenes( int *nroPrimo, int* qdePrimo ) {
 	int raiz;
 	int cond = TRUE;
 	int i, j; 
-	int vetor[*nroPrimo];
-	long startTime;
+	int vetor[*nroPrimo];1w
 
 	raiz = sqrt( *nroPrimo );
 
 	/* Preenchimento do vetor os valores */
-	#pragma omp parallel for private( i )
+	//#pragma omp parallel for private( i )
 	for( i = 2; i <= *nroPrimo; i++ ) {
 
 		vetor[i] = i;
 	}
 
-	#pragma omp parallel for private( i, j ) schedule( dynamic )
+	//#pragma omp parallel for private( i, j ) schedule( dynamic )
 	for( i = 2; i <= raiz; i++ ) {
 	
 		/* Invalida números não primos */
@@ -168,9 +167,9 @@ void palindromoSentenca( char *colecao, int *palindromoSen, int* palindromoPal, 
 	strcpy( sentenca, colecao );
 
 	/* Troca todas as letras maiúscula por minúscila, se necessário */
-	#pragma omp sections nowait
-	{
-	#pragma omp section
+	//#pragma omp sections nowait
+	//{
+	//#pragma omp section
 	while( sentenca[i] != '\0' ) {
 
 		if( sentenca[i] != ' ' ) { 
@@ -182,7 +181,7 @@ void palindromoSentenca( char *colecao, int *palindromoSen, int* palindromoPal, 
 
 		i++;
 	}
-	}
+	//}
 
 	checkPunctuationMark( sentenca );
 
@@ -290,7 +289,7 @@ int main( int argc, char* argv[] ) {
 		gettimeofday( &iniTempo, NULL );
 		double tS = iniTempo.tv_sec + ( iniTempo.tv_usec / 1000000.0 );
 
-		#pragma omp parallel num_threads(4)  
+		//#pragma omp parallel num_threads(2)  
 		while( !feof( file ) ) {
 
 			fscanf( file, "%[^\n]\n", sentenca );
@@ -310,7 +309,7 @@ int main( int argc, char* argv[] ) {
 		gettimeofday( &iniTempo, NULL );
 		double tS = iniTempo.tv_sec + ( iniTempo.tv_usec / 1000000.0 );
 
-		#pragma omp parallel num_threads(4)  
+		//#pragma omp parallel num_threads(2)  
 		while( !feof( file ) ) {
 
 			fscanf( file, "%[^\n]\n", sentenca );
