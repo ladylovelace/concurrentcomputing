@@ -99,6 +99,7 @@ void iteracao( cast **matriz, cast *t_indep, cast *x_old, cast *x_new, cast *err
 	for( i = 0; i < *ordem; i++ )
 		valorAprox += matriz[*filaAval][i] * x_new[i];
 	
+  valorAprox = valorAprox * diagonal[*filaAval];
 
 	printf( "\n--------------------------------------------\n" );
 	printf( "Iterations: %d\n", k );
