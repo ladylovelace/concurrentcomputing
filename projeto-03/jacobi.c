@@ -14,7 +14,7 @@ void dividirPelaDiagonal( cast **matriz, int *ordem, cast *t_indep, cast *diagon
 	cast valor;
 
 	/* Dividir cada equação pelo correspondente elemento da diagonal principal */
-	printf("COEFICIENTES DA MATRIZ (FUNCAO)\n");
+	printf("COEFICIENTES DA MATRIZ DIVIDIDO PELA DIAGONAL PRINCIPAL\n");
 	for( i = 0; i < *ordem; i++ ) {
 
 		t_indep[i] = t_indep[i] / diagonal[i];
@@ -22,12 +22,14 @@ void dividirPelaDiagonal( cast **matriz, int *ordem, cast *t_indep, cast *diagon
 		for( j = 0; j < *ordem; j ++ ) { 
 
 			matriz[i][j] = matriz[i][j] / diagonal[i];
+
 			printf("%f   ", matriz[i][j] );
 
 		}
 		printf("\n");
 	}
 
+	printf("\n");
 	/*Teste do critério de convergência: para este caso foi utilizado o critério das linhas */
 	for( i = 0; i < *ordem; i++ ) {
 		
@@ -49,10 +51,11 @@ void dividirPelaDiagonal( cast **matriz, int *ordem, cast *t_indep, cast *diagon
 	}
 }
 
-void iteracao( cast **matriz, cast *t_indep, cast *x_old, cast *x_new, cast *erro, int *filaAval, int *maxIter, int *ordem ) {
+void iteracao( cast **matriz, cast *t_indep, cast *x_old, cast *x_new, cast *erro, int *filaAval, int *maxIter, int *ordem, cast *diagonal ) {
 
 	int k = 0, j, i;	
 	cast thisErro = 1.0;
+	cast valorAprox = 0.0;
 	int flag = FALSE;
 
 	while( k < *maxIter && !flag ) {
@@ -74,11 +77,11 @@ void iteracao( cast **matriz, cast *t_indep, cast *x_old, cast *x_new, cast *err
 			printf( " %f =  %f\n", t_indep[i], x_new[i] );
 		}
 
-		//printf("Vetor: %f -- VetorAux: %f\n", vetor[*filaAval - 1], vetorAux[*filaAval - 1]);
+		//printf("x_old: %f -- x_new: %f\n", x_old[*filaAval - 1], x_new[*filaAval - 1]);
 		thisErro = ( fabs( x_new[*filaAval - 1] - x_old[*filaAval - 1] ) ) / fabs( x_new[*filaAval - 1] );
 		printf( "ERRO: %f\n", thisErro );
 		
-		if( thisErro > *erro ) {
+		if( thisErro > *erro && k < *maxIter - 1) {
 
 			for( j = 0; j < *ordem; j ++ ) {
 		
@@ -93,9 +96,13 @@ void iteracao( cast **matriz, cast *t_indep, cast *x_old, cast *x_new, cast *err
 		k++;
 	}
 
+	for( i = 0; i < *ordem; i++ )
+		valorAprox += matriz[*filaAval][i] * x_new[i];
+	
+
 	printf( "\n--------------------------------------------\n" );
 	printf( "Iterations: %d\n", k );
-	printf( "RowTest: %d => [%f] =? %f\n", *filaAval, x_old[*filaAval - 1], x_new[*filaAval - 1]);
+	printf( "RowTest: %d => [%f] =? %f\n", *filaAval, valorAprox, ( t_indep[*filaAval] * diagonal[*filaAval] ) );
 	if( flag )
 		printf( "Condição de parada por ERRO\n" );
 	else
@@ -182,7 +189,7 @@ int main( int argc, char* argv[] ) {
 
 		dividirPelaDiagonal( matriz, &ordem, t_indep, diagonal );
 
-		iteracao( matriz, t_indep, x_old, x_new, &erro, &filaAval, &maxIter , &ordem );
+		iteracao( matriz, t_indep, x_old, x_new, &erro, &filaAval, &maxIter , &ordem, diagonal );
 
 	}
 
