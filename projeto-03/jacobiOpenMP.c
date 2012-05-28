@@ -1,0 +1,194 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <omp.h>
+
+#define TRUE 1
+#define FALSE 0
+
+typedef float **MATRIZ;
+typedef float cast;
+
+void dividirPelaDiagonal( cast **matriz, int *ordem, cast *t_indep, cast *diagonal ) {
+
+	int i, j;
+	cast valor;
+
+	/* Dividir cada equação pelo correspondente elemento da diagonal principal */
+	#pragma omp parallel for private( i, j ) schedule( dynamic )
+	for( i = 0; i < *ordem; i++ ) {
+
+		t_indep[i] = t_indep[i] / diagonal[i];
+
+		for( j = 0; j < *ordem; j ++ ) { 
+
+			matriz[i][j] = matriz[i][j] / diagonal[i];
+
+			//printf("%f   ", matriz[i][j] );
+
+		}
+		//printf("\n");
+	}
+
+	//printf("\n");
+	/*Teste do critério de convergência: para este caso foi utilizado o critério das linhas */
+	#pragma omp parallel for private( i, j ) schedule( dynamic )
+	for( i = 0; i < *ordem; i++ ) {
+		
+		valor = 0.0;
+
+		for( j = 0; j < *ordem; j++ ) {
+		
+			if( i != j && valor < 1 ) {
+	
+				valor += matriz[i][j];
+
+			} else if( valor > 1 ) {
+				
+				printf( "O processo de Jacobi-Richardson aplicado ao sistema dado NAO covergerah!\n" );
+				exit( 1 );
+			}
+		}
+		//printf("Somatorio da linha: %d = %f\n", i, valor);
+	}
+}
+
+void iteracao( cast **matriz, cast *t_indep, cast *x_old, cast *x_new, cast *erro, int *filaAval, int *maxIter, int *ordem, cast *diagonal ) {
+
+	int k = 0, j, i;	
+	cast thisErro = 1.0;
+	cast valorAprox = 0.0;
+	int flag = FALSE;
+
+	#pragma omp parallel num_threads(4)  
+	while( k < *maxIter && !flag ) {
+
+		#pragma omp parallel for private( i, j ) schedule( dynamic )
+		for( i = 0; i < *ordem ; i++ ) {
+
+			for( j = 0; j < *ordem; j++ ) {
+
+				if( i != j ) {
+					
+					/* X = -( L* + R* )x + b* */
+					//printf( "(%f x %f) + ", -1 * matriz[i][j], x_old[j] );
+					x_new[i] += ( -1 * matriz[i][j] ) * x_old[j];
+				}
+			}
+
+			/* Soma do termo independente */
+			x_new[i] += t_indep[i];
+			//printf( " %f =  %f\n", t_indep[i], x_new[i] );
+		}
+
+		//printf("x_old: %f -- x_new: %f\n", x_old[*filaAval - 1], x_new[*filaAval - 1]);
+		thisErro = ( fabs( x_new[*filaAval] - x_old[*filaAval] ) ) / fabs( x_new[*filaAval] );
+		//printf( "ERRO: %f\n", thisErro );
+		
+		if( thisErro > *erro && k < *maxIter - 1 ) {
+
+			for( j = 0; j < *ordem; j++ ) {
+		
+				x_old[j] = x_new[j];
+				x_new[j] = 0;
+				//printf("Vetor[%d]: %f\n", j, vetor[j]);
+			}
+
+		} else 
+			flag = TRUE;
+
+		k++;
+	}
+
+	for( i = 0; i < *ordem; i++ )
+		valorAprox += matriz[*filaAval][i] * x_new[i];
+	
+	valorAprox = valorAprox*diagonal[*filaAval];
+
+	printf( "\n--------------------------------------------\n" );
+	printf( "Iterations: %d\n", k );
+	printf( "RowTest: %d => [%f] =? %f\n", *filaAval, valorAprox, ( t_indep[*filaAval] * diagonal[*filaAval] ) );
+	printf( "--------------------------------------------\n\n" );
+}
+
+int main( int argc, char* argv[] ) {
+
+	FILE *file;
+	int ordem, maxIter, filaAval;
+	int i, j;
+	cast erro;
+	MATRIZ matriz;
+	cast *t_indep, *x_old, *x_new, *diagonal;
+
+	if( ( file = fopen( argv[1], "r" ) ) == NULL ) {
+
+		printf( "ERRO: na abertura do arquivo\n" );
+		exit( 1 );
+
+	} else {
+
+		fscanf( file, "%d", &ordem );
+		//printf( "Ordem: %d\n", ordem );
+		fscanf( file, "%d", &filaAval );
+		//printf( "Fila avaliacao: %d\n", filaAval );
+		fscanf( file, "%f", &erro );
+		//printf( "Ordem: %f\n", erro );
+		fscanf( file, "%d", &maxIter );
+		//printf( "MaxIteracao: %d\n", maxIter );
+
+		/* Alocação de memória para os valores da diagonal principal */
+		diagonal = ( cast* ) malloc ( ( ordem ) * sizeof( cast ) );
+
+		/* Alocação de memória das linhas da matriz */
+		matriz = ( cast** ) malloc ( ( ordem ) * sizeof( cast* ) ); 
+
+		/* Alocação de memória das colunas e o preechimento da matriz */
+		#pragma omp parallel for private( i, j ) schedule( dynamic )
+		for( i = 0; i < ordem; i++ ) {
+
+			matriz[i] = ( cast* ) malloc( ( ordem + 1 ) * sizeof( cast ) );
+
+			for( j = 0; j < ordem; j++ ) { 
+
+				fscanf( file, "%f ", &matriz[i][j] );
+
+				if( i == j ) 
+					diagonal[i] = matriz[i][j];
+			}
+		}
+
+		x_old = ( cast* ) malloc ( ( ordem ) * sizeof( cast ) );
+		x_new = ( cast* ) malloc ( ( ordem ) * sizeof( cast ) );
+		
+		/* Alocação de memória para os termos independentes da equação */
+		t_indep = ( cast* ) malloc ( ( ordem ) * sizeof( cast ) );
+
+		/* Preechimento do termo independente */
+		#pragma omp parallel for private( i )
+		for( i = 0; i < ordem; i++ ) {
+
+			fscanf( file, "%f", &t_indep[i] );
+			x_old[i] = 0.0;
+
+		}
+		
+		dividirPelaDiagonal( matriz, &ordem, t_indep, diagonal );
+
+		iteracao( matriz, t_indep, x_old, x_new, &erro, &filaAval, &maxIter , &ordem, diagonal );
+
+	}
+
+	/* Desalocação de memória */
+	#pragma omp parallel for private( i )
+	for( i = 0; i < ordem; i++ )
+		free( matriz[i] );
+
+	free( matriz );
+	free( diagonal );
+	free( x_old );
+	free( x_new );
+
+	fclose( file );
+
+	return EXIT_SUCCESS;
+}
