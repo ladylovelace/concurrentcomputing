@@ -27,7 +27,7 @@ typedef struct bloco{
     cast *X_new;
     cast *B;
     
-} bloco;
+} Bloco;
 
 void dividirPelaDiagonal( int *ordem, cast **matriz, cast *diagonal, cast *t_indep ) {
     
@@ -64,7 +64,7 @@ void dividirPelaDiagonal( int *ordem, cast **matriz, cast *diagonal, cast *t_ind
                 
 			} else if( valor > 1 ) {
                 
-				//printf( "O processo de Jacobi-Richardson aplicado ao sistema dado NAO covergerah!\n" );
+				printf( "O processo de Jacobi-Richardson aplicado ao sistema dado NAO convergerah\n" );
 				exit( 1 );
 			}
 		}
@@ -153,9 +153,11 @@ int main (int argc,char**argv){
     MPI_Comm_rank ( MPI_COMM_WORLD, &myRank );
     MPI_Get_processor_name( processorName, &nameLen );
     
+    
     /* Inicia o cálculo do tempo */
     gettimeofday( &iniTempo, NULL );
     double tS = iniTempo.tv_sec + ( iniTempo.tv_usec / 1000000.0 );
+    
     if( ( file = fopen( argv[1], "r" ) ) == NULL ) {
         
         printf( "ERRO: na abertura do arquivo\n" );
@@ -163,7 +165,6 @@ int main (int argc,char**argv){
         exit( 1 );
         
     } else {
-        if ( myRank == ROOT ) {
             fscanf( file, "%d", &ordem );
             //printf( "Ordem: %d\n", ordem );
             fscanf( file, "%d", &filaAval );
@@ -233,7 +234,7 @@ int main (int argc,char**argv){
         printf("\n");
         printf("número de processos: %d, ordem: %d e pedaço: %d", numSlave, ordem, qtdeLinhas);
         printf("\n");
-        bloco decomposto[numSlave];
+        Bloco decomposto[numSlave];
         int inicio = 0;
         for(i=1; i<= numSlave; i++){
             if (i<=(ordem%numSlave)){
