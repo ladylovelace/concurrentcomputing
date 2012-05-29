@@ -23,15 +23,9 @@ typedef float cast;
 cast erro;
 int ordem, maxIter, filaAval;
 
-void tratamentoMatrizVetor( FILE *file, cast **A, cast *b, cast *x, int *qdeProc ) {
+void tratamentoMatrizVetor( FILE *file, cast **A, cast *b, int *qdeProc ) {
 
 	int i, j;
-	/* Número de elementos por processos */
-	int divisaoTam = ordem / *qdeProc;
-
-	/* corrigindo caso tenha sido arredondado para baixo */
-	if( divisaoTam * ( *qdeProc ) < ordem )
-		divisaoTam++;
 
 	for( i = 0; i < ordem; i++ ) {
 
@@ -69,10 +63,6 @@ void tratamentoMatrizVetor( FILE *file, cast **A, cast *b, cast *x, int *qdeProc
 		//printf("%f   ", b[i]);
 	}
 	//printf("\n");
-
-	for( i = 0; i < ordem; i++ ) 
-		x[i] = 0.0;
-	
 }
 
 /*
@@ -117,38 +107,25 @@ void particionamentoVetor( int *qdeProc, Bloco *bloco ) {
 
 void jacobiRichardson( Bloco *bloco, cast **A, cast *b, cast *x, int *myRank, int *qdeProc ) {
 
-	/*int i, j;
-
-	printf("qdeLinha[%d]: %d\n", *myRank, bloco[*myRank].qdeLinha);
-	printf("A partir linha[%d]: %d\n", *myRank, bloco[*myRank].fromLinha);
-	printf("flagAval[%d]: %d\n", *myRank, bloco[*myRank].flagAval);
-
-	for( i = bloco[*myRank].fromLinha; i < ( bloco[*myRank].qdeLinha + bloco[*myRank].fromLinha ); i++ )
-		for( j = 0; j < ordem; j++ )
-			printf("****SLAVE(%d)= %f\n", *myRank, A[i][j]);
-
-	for( i = 0; i < ordem; i++ )
-		printf("****SLAVE(%d)= %f\n", *myRank, b[i]);*/
-
-	int k = 0, i, j;	
+	int k = 0, i, j, l;	
 	cast thisErro = 1.0;
 	cast valorAprox = 0.0;
 	int flag = FALSE;
-	cast x_temp[ordem];
-	cast x_new[ordem];
-
+	cast *x_temp;
+	cast *x_new;
 	/* Variável linha para controle da b_equação */
 	int linha = bloco[*myRank].fromLinha;
-
-	for( i = 0; i < ordem; i++ ) {
-
-		x_temp[i] = 0.0;
-		x_new[i] = 0.0;
-
-	}
+	
+	/* Aloca uma área de memória para cada variável e preenche as com valor zero. 
+	 * A variável x_temp contém os valores que serão utilizados para o cálculo do erro.
+	 * A variável x_new contém os valores que serão passados pela rotina MPI_Allgather.
+	 */
+	x_temp = ( cast* ) calloc( ordem, sizeof( cast ) );
+	x_new = ( cast* ) calloc( linha, sizeof( cast ) );
 
 	while( k < maxIter && !flag ) {
 
+		l = 0;
 		for( i = linha; i < ( bloco[*myRank].qdeLinha + bloco[*myRank].fromLinha ); i++ ) {
 			
 			for( j = 0; j < ordem; j++ ) {
@@ -157,40 +134,39 @@ void jacobiRichardson( Bloco *bloco, cast **A, cast *b, cast *x, int *myRank, in
 					
 					/* X = -( L* + R* )x + b */
 					printf( "(%f x %f) + ", -1 * A[i][j], x[j] );
-					x_new[i] += ( -1 * A[i][j] ) * x[j];
+					x_new[l] = ( -1 * A[i][j] ) * x[j];
+					x_temp[i] = x_new[l];
 				}
 			}
 
 			/* Soma do termo independente da posição correspondente */
-			x_new[i] += b[i];
-			printf( " %f =  %f\n", b[i], x_new[i] );
+			x_new[l] += b[i];
+			x_temp[i] = x_new[l];
+			printf( " %f =  %f\n", b[i], x_temp[i] );
 			linha++;
+			l++;
 		}
 
-		/* Confere o erro */
+		/* O nó que que tem a flagAval 'setado' como TRUE confere o erro */
 		if( bloco[*myRank].flagAval == TRUE ) {
 
-			//printf("x_old: %f -- x_new: %f\n", x_old[*filaAval - 1], x_new[*filaAval - 1]);
-			thisErro = ( fabs( x_new[filaAval] - x[filaAval] ) ) / fabs( x_new[filaAval] );
+			printf("x_old: %f -- x_new: %f\n", x[filaAval], x_temp[filaAval]);
+			thisErro = ( fabs( x_temp[filaAval] - x[filaAval] ) ) / fabs( x_temp[filaAval] );
 			printf( "ERRO: %f\n", thisErro );	
 
-			if( thisErro > erro && k < maxIter - 1 ) {
-
-				for( j = 0; j < ordem; j++ ) {
-		
-					x[j] = x_new[j];
-					x_new[j] = 0;
-				}
-
-			} else 
+			if( thisErro > erro && k < maxIter - 1 );
+			else 
 				flag = TRUE;
-			
 		}
 
-		MPI_Allgather( x_temp, sizeof( x_temp ), MPI_FLOAT, x, sizeof( x_temp ), MPI_FLOAT, MPI_COMM_WORLD );
+		MPI_Allgather( &x_new[0], bloco[*myRank].qdeLinha, MPI_FLOAT, x, bloco[*myRank].qdeLinha, MPI_FLOAT, MPI_COMM_WORLD );
 
+		linha = bloco[*myRank].fromLinha;
+		
+		k++;		
 	} 
 
+	/* O nó que que tem a flagAval 'setado' como TRUE imprime a saída */
 	if( bloco[*myRank].flagAval == TRUE ) {
 
 		for( i = 0; i < ordem; i++ )
@@ -201,10 +177,7 @@ void jacobiRichardson( Bloco *bloco, cast **A, cast *b, cast *x, int *myRank, in
 		printf( "\n--------------------------------------------\n" );
 		printf( "Iterations: %d\n", k );
 		printf( "RowTest: %d => [%f] =? %f\n", filaAval, valorAprox, ( b[filaAval] * A[filaAval][filaAval] ) );
-		printf( "--------------------------------------------\n\n" ); 
-
-		// Condição que determina que todos os slaves terminaram a tarefa 			
-		MPI_Reduce( &myRank, &finalizar, 1, MPI_INT, MPI_SUM, *myRank, MPI_COMM_WORLD );	
+		printf( "--------------------------------------------\n\n" ); 	
 	}
 
 }
@@ -214,12 +187,11 @@ int main ( int argc, char *argv[] ) {
 	FILE *file;
 	cast **A;
 	cast *b, *x;
-	int finalizar = 0, i;
+	int i;
 	int qdeProc, myRank, nameLen;		
 	char processorName[20];
 	struct timeval iniTempo;
 	struct timeval fimTempo;
-	MPI_Status status;
 
 	MPI_Init ( &argc, &argv );
 
@@ -244,20 +216,20 @@ int main ( int argc, char *argv[] ) {
 		fscanf( file, "%d", &maxIter );
 		//printf( "MaxIteracao: %d\n", maxIter );
 			
-		// Alocação de memória da coluna da matriz 
+		/* Alocação de memória da coluna da matriz */
 		A = ( cast** ) malloc ( ( ordem ) * sizeof( cast* ) ); 
 
-		// Alocação de memória das linhas da matriz 
+		/* Alocação de memória das linhas da matriz */
 		for( i = 0; i < ordem; i++ ) 
 			A[i] = ( cast* ) malloc( ( ordem ) * sizeof( cast ) );
 
-		// Alocação de memória do termo independente da matriz 
+		/* Alocação de memória do termo independente da matriz */
 		b = ( cast* ) malloc ( ( ordem ) * sizeof( cast ) ); 
 
-		// Alocação de memória do termo independente da matriz 
-		x = ( cast* ) malloc ( ( ordem ) * sizeof( cast ) );
+		/* Aloca uma área de memória para a variável e preenche a com valor zero */
+		x = ( cast* ) calloc ( ordem, sizeof( cast ) );
 
-		tratamentoMatrizVetor( file, A, b, x, &qdeProc );
+		tratamentoMatrizVetor( file, A, b, &qdeProc );
 
 		particionamentoVetor( &qdeProc, bloco );
 
@@ -270,7 +242,6 @@ int main ( int argc, char *argv[] ) {
 		exit( 1 );
 	}
 
-	
 	jacobiRichardson( bloco, A, b, x, &myRank, &qdeProc );
 		
 	printf("\n");
@@ -279,7 +250,7 @@ int main ( int argc, char *argv[] ) {
 	gettimeofday( &fimTempo, NULL );
 	double tE = fimTempo.tv_sec + ( fimTempo.tv_usec / 1000000.0 );
 
-	//printf( "Tempo de execução do processo: %s eh de %.3lf segundos\n\n", processorName, tE - tS );
+	printf( "Tempo de execução do processo: %s eh de %.3lf segundos\n\n", processorName, tE - tS );
 
 	MPI_Finalize();
 	return EXIT_SUCCESS;
