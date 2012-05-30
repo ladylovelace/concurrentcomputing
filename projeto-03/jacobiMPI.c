@@ -106,7 +106,7 @@ void particionamentoVetor( int *qdeProc, Bloco *bloco ) {
 }
 
 void jacobiRichardson( Bloco *bloco, cast **A, cast *b, cast *x, int *myRank, int *qdeProc ) {
-	int aux=0;
+	cast aux=0.0;
 	int k = 0, i, j, l;	
 	cast thisErro = 1.0;
 	cast valorAprox = 0.0;
@@ -158,7 +158,7 @@ void jacobiRichardson( Bloco *bloco, cast **A, cast *b, cast *x, int *myRank, in
 			else 
 				flag = TRUE;
 			aux=thisErro;
-		}
+		} 
 
 		MPI_Allgather( &x_new[0], bloco[*myRank].qdeLinha, MPI_FLOAT, x, bloco[*myRank].qdeLinha, MPI_FLOAT, MPI_COMM_WORLD );
 
