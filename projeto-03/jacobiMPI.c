@@ -48,11 +48,11 @@ void tratamentoMatrizVetor( FILE *file, cast **A, cast *b, int *qdeProc ) {
 
 		for( j = 0; j < ordem; j++ ) {
 
-			if( i != j ) 
+			if( i != j )
 				A[i][j] /= A[i][i];
-		
+
 			//printf("%f   ", A[i][j]);
-		}	
+		}
 		//printf("\n");
 	}
 
@@ -71,7 +71,7 @@ void tratamentoMatrizVetor( FILE *file, cast **A, cast *b, int *qdeProc ) {
  */
 void particionamentoVetor( int *qdeProc, Bloco *bloco ) {
 
-	int i, j;
+	int i, j, flag = FALSE;
 	int quociente, resto, denominador, qdeLinhaAux, qdeLinhaProx, qdeLinha;
 
 	qdeLinhaAux = 0;
@@ -84,7 +84,7 @@ void particionamentoVetor( int *qdeProc, Bloco *bloco ) {
 		//printf("Quociente: %d\n", quociente);
 		resto = ( ordem - qdeLinhaAux ) % ( denominador );
 		//printf("Resto: %d\n", resto);
-		qdeLinha = quociente + resto;	
+		qdeLinha = quociente + resto;
 		//printf("qdeLinha: %d\n", qdeLinha);
 
 		bloco[i].qdeLinha = qdeLinha;
@@ -92,95 +92,109 @@ void particionamentoVetor( int *qdeProc, Bloco *bloco ) {
 		bloco[i].fromLinha = qdeLinhaAux;
 		//printf("bloco[%d]: %d\n",i, bloco[i].fromLinha);
 		bloco[i].flagAval = FALSE;
-		
-		for( j = qdeLinhaProx; j < ( qdeLinhaProx + qdeLinha ); j++ )  {
 
-			if( qdeLinhaProx == filaAval )
-				bloco[i].flagAval = TRUE;
+		if( !flag ) {
+
+			for( j = qdeLinhaProx; j < ( qdeLinhaProx + qdeLinha ); j++ )  {
+
+				if( j == filaAval ) {
+
+					bloco[i].flagAval = TRUE;
+					flag = TRUE;
+				}
+			}
 		}
 		//printf("bloco[%d]: %d\n",i, bloco[i].flagAval);
 		qdeLinhaProx = j++;
 		denominador--;
-		qdeLinhaAux += qdeLinha;		
+		qdeLinhaAux += qdeLinha;
 	}
 }
 
 void jacobiRichardson( Bloco *bloco, cast **A, cast *b, cast *x, int *myRank, int *qdeProc ) {
 	cast aux=0.0;
-	int k = 0, i, j, l;	
+	int k = 0, i, j, l;
 	cast thisErro = 1.0;
 	cast valorAprox = 0.0;
 	int flag = FALSE;
 	cast *x_temp;
 	cast *x_new;
+
 	/* Variável linha para controle da b_equação */
 	int linha = bloco[*myRank].fromLinha;
-	
-	/* Aloca uma área de memória para cada variável e preenche as com valor zero. 
+
+	/* Aloca uma área de memória para cada variável e preenche as com valor zero.
 	 * A variável x_temp contém os valores que serão utilizados para o cálculo do erro.
 	 * A variável x_new contém os valores que serão passados pela rotina MPI_Allgather.
 	 */
 	x_temp = ( cast* ) calloc( ordem, sizeof( cast ) );
-	x_new = ( cast* ) calloc( linha, sizeof( cast ) );
+	x_new = ( cast* ) calloc( bloco[*myRank].qdeLinha, sizeof( cast ) );
 
 	while( k < maxIter && !flag ) {
 
 		l = 0;
 		for( i = linha; i < ( bloco[*myRank].qdeLinha + bloco[*myRank].fromLinha ); i++ ) {
-			
+
 			for( j = 0; j < ordem; j++ ) {
 
 				if( A[i][j] != ordem ) {
-					
+
 					/* X = -( L* + R* )x + b */
-					printf( "(%f x %f) + ", -1 * A[i][j], x[j] );
-					x_new[l] = ( -1 * A[i][j] ) * x[j];
-					x_temp[i] = x_new[l];
+					//'printf( "(%f x %f) + ", -1 * A[i][j], x[j] );
+					x_new[l] += ( -1 * A[i][j] ) * ( x[j] );
 				}
 			}
 
 			/* Soma do termo independente da posição correspondente */
+			//printf("%f  ", x_new[l]);
 			x_new[l] += b[i];
 			x_temp[i] = x_new[l];
-			printf( " %f =  %f\n", b[i], x_temp[i] );
+			//printf( " %f =  %f\n", b[i], x_temp[i] );
 			linha++;
 			l++;
 		}
 
 		/* O nó que que tem a flagAval 'setado' como TRUE confere o erro */
-		if( bloco[*myRank].flagAval == TRUE ) {
+		if( bloco[*myRank].flagAval == TRUE  ) {
 
-			printf("x_old: %f -- x_new: %f\n", x[filaAval], x_temp[filaAval]);
+			//printf("FilaAval: %d -- x_old: %f -- x_new: %f  ", filaAval, x[filaAval], x_temp[filaAval]);
 			thisErro = ( fabs( x_temp[filaAval] - x[filaAval] ) ) / fabs( x_temp[filaAval] );
-			printf( "ERRO: %f\n", thisErro );	
+			x[filaAval] = x_temp[filaAval];
+			//printf( "ERRO: %f\n", thisErro );
 
 			if( thisErro > erro && k < maxIter - 1 || aux == thisErro);
-			else 
+			else
 				flag = TRUE;
 			aux=thisErro;
 		} 
 
-		MPI_Allgather( &x_new[0], bloco[*myRank].qdeLinha, MPI_FLOAT, x, bloco[*myRank].qdeLinha, MPI_FLOAT, MPI_COMM_WORLD );
-
-		linha = bloco[*myRank].fromLinha;
+		MPI_Allgather( x_new, bloco[*myRank].qdeLinha, MPI_FLOAT, x, bloco[*myRank].qdeLinha, MPI_FLOAT, MPI_COMM_WORLD );	
 		
-		k++;		
-	} 
+		linha = bloco[*myRank].fromLinha;
+
+		for( i = 0; i < bloco[*myRank].qdeLinha; i++ ) 
+			x_new[i] = 0.0;
+
+		k++;
+	}
 
 	/* O nó que que tem a flagAval 'setado' como TRUE imprime a saída */
 	if( bloco[*myRank].flagAval == TRUE ) {
 
-		for( i = 0; i < ordem; i++ )
-			valorAprox += A[filaAval][i] * x_new[i];
-	
-		valorAprox = valorAprox * A[filaAval][filaAval];
-	
+		for( i = 0; i < ordem; i++ ) {
+
+			//printf("%fx%f\n", A[filaAval][i], x[i]);		
+			valorAprox += A[filaAval][i] * x[i];
+		}
+
 		printf( "\n--------------------------------------------\n" );
 		printf( "Iterations: %d\n", k );
 		printf( "RowTest: %d => [%f] =? %f\n", filaAval, valorAprox, ( b[filaAval] * A[filaAval][filaAval] ) );
-		printf( "--------------------------------------------\n\n" ); 	
-	}
+		printf( "ERRO: %f\n", thisErro );
+		printf( "--------------------------------------------\n\n" );
 
+		MPI_Abort( MPI_COMM_WORLD, 1 );
+	}
 }
 
 int main ( int argc, char *argv[] ) {
@@ -189,7 +203,7 @@ int main ( int argc, char *argv[] ) {
 	cast **A;
 	cast *b, *x;
 	int i;
-	int qdeProc, myRank, nameLen;		
+	int qdeProc, myRank, nameLen;
 	char processorName[20];
 	struct timeval iniTempo;
 	struct timeval fimTempo;
@@ -207,34 +221,34 @@ int main ( int argc, char *argv[] ) {
 	Bloco *bloco = ( Bloco* ) malloc( qdeProc * sizeof( Bloco ) );
 
 	if( ( file = fopen ( argv[1], "r" ) ) != NULL ) {
-		
+
 		fscanf( file, "%d", &ordem );
-		//printf( "Ordem: %d\n", ord );
+		//printf( "Ordem: %d\n", ordem );
 		fscanf( file, "%d", &filaAval );
 		//printf( "Fila avaliacao: %d\n", filaAval );
 		fscanf( file, "%f", &erro );
 		//printf( "Erro: %f\n", erro );
 		fscanf( file, "%d", &maxIter );
 		//printf( "MaxIteracao: %d\n", maxIter );
-			
+
 		/* Alocação de memória da coluna da matriz */
-		A = ( cast** ) malloc ( ( ordem ) * sizeof( cast* ) ); 
+		A = ( cast** ) malloc ( ( ordem ) * sizeof( cast* ) );
 
 		/* Alocação de memória das linhas da matriz */
-		for( i = 0; i < ordem; i++ ) 
+		for( i = 0; i < ordem; i++ )
 			A[i] = ( cast* ) malloc( ( ordem ) * sizeof( cast ) );
 
 		/* Alocação de memória do termo independente da matriz */
-		b = ( cast* ) malloc ( ( ordem ) * sizeof( cast ) ); 
+		b = ( cast* ) malloc ( ( ordem ) * sizeof( cast ) );
 
 		/* Aloca uma área de memória para a variável e preenche a com valor zero */
-		x = ( cast* ) calloc ( ordem, sizeof( cast ) );
+		x = ( cast* ) malloc ( ( ordem + 1) * sizeof( cast ) );
 
 		tratamentoMatrizVetor( file, A, b, &qdeProc );
 
 		particionamentoVetor( &qdeProc, bloco );
 
-		fclose( file );	
+		fclose( file );
 
 	} else {
 
@@ -244,14 +258,12 @@ int main ( int argc, char *argv[] ) {
 	}
 
 	jacobiRichardson( bloco, A, b, x, &myRank, &qdeProc );
-		
-	printf("\n");
 
 	/* Termina o cálculo do tempo */
 	gettimeofday( &fimTempo, NULL );
 	double tE = fimTempo.tv_sec + ( fimTempo.tv_usec / 1000000.0 );
 
-	printf( "Tempo de execução do processo: %s eh de %.3lf segundos\n\n", processorName, tE - tS );
+	//printf( "Tempo de execução do processo: %s eh de %.3lf segundos\n\n", processorName, tE - tS );
 
 	MPI_Finalize();
 	return EXIT_SUCCESS;
